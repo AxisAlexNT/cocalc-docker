@@ -6,7 +6,8 @@
 # various Jupyter kernels, including ones for Python, Octave, and JavaScript. The
 # image is built on top of the Ubuntu 22.10 operating system.
 
-ARG MYAPP_IMAGE=ubuntu:22.10
+ARG MYAPP_IMAGE=tensorflow/tensorflow:latest-gpu
+#ubuntu:22.10
 FROM $MYAPP_IMAGE
 
 MAINTAINER William Stein <wstein@sagemath.com>
@@ -57,6 +58,7 @@ RUN \
        python2 \
        python3-pip \
        python3-pandas \
+       python3-pip \
        make \
        cmake \
        g++ \
@@ -90,6 +92,14 @@ RUN \
        build-essential \
        automake \
        jq
+
+RUN pip3 install --upgrade pip
+
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive sudo apt install -y wget ca-certificates
+
+RUN wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+
+RUN sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" >> /etc/apt/sources.list.d/pgdg.list'
 
 RUN \
    apt-get update \
@@ -146,7 +156,8 @@ COPY scripts/ /usr/sage-install-scripts/
 RUN chmod -R a+rx /usr/sage-install-scripts/
 
 RUN    adduser --quiet --shell /bin/bash --gecos "Sage user,101,," --disabled-password sage \
-    && chown -R sage:sage /home/sage/
+    && chown -R sage:sage /home/sage/ \
+    && echo "sage ALL=(ALL) NOPASSWD:ALL"  >> /etc/sudoers
 
 # make source checkout target, then run the install script
 # see https://github.com/docker/docker/issues/9547 for the sync
@@ -176,7 +187,26 @@ RUN rm -rf /usr/local/sage/build/pkgs/sagelib/src/build
 # Try to install from pypi again to get better control over versions.
 # - ipywidgets<8 is because of https://github.com/sagemathinc/cocalc/issues/6128
 # - jupyter-client<7 is because of https://github.com/sagemathinc/cocalc/issues/5715
-RUN pip3 install pyyaml matplotlib jupyter jupyterlab "ipywidgets<8" "jupyter-client<7"
+RUN pip3 install pyyaml
+RUN pip3 install matplotlib
+RUN pip3 install pure-eval ptyprocess pickleshare json5 fastjsonschema executing backcall websocket-client webcolors uri-template traitlets tornado tomli tinycss2 sniffio send2trash rpds-py rfc3986-validator rfc3339-validator pyzmq python-json-logger python-dateutil pygments pycparser psutil prompt-toolkit prometheus-client platformdirs pkgutil-resolve-name pexpect parso pandocfilters overrides nest-asyncio mistune
+RUN pip3 install attrs
+RUN pip3 install -vvv jsonpointer jinja2 importlib-resources fqdn exceptiongroup defusedxml debugpy charset-normalizer bleach babel attrs async-lru asttokens terminado
+RUN pip3 install -vvv stack-data
+RUN pip3 install -vvv requests
+#RUN echo N | sudo tee /sys/module/overlay/parameters/metacopy
+RUN export PYTHONDONTWRITEBYTECODE=1
+RUN pip3 uninstall -y attr
+RUN python3 -B -m pip install --no-cache-dir -vvv attrs==19.3.0 referencing rpds-py
+RUN pip3 install -vvv matplotlib-inline
+RUN pip3 install -vvv jedi
+RUN pip3 install -vvv comm
+RUN pip3 install -vvv cffi
+RUN pip3 install -vvv arrow
+RUN pip3 install -vvv anyio
+RUN pip3 install -vvv attrs==19.3.0 jsonschema-specifications
+RUN pip3 install -vvv isoduration
+RUN pip3 install -vvv pyzmq==25.1.1 attrs==19.3.0 requests==2.22.0 argon2-cffi-bindings jsonschema argon2-cffi ipykernel ipython jupyter jupyterlab "ipywidgets<8" "jupyter-client<7"
 
 # The python3 kernel that gets installed is broken, and we don't need it
 RUN rm -rf /usr/local/share/jupyter/kernels/python3
@@ -212,9 +242,29 @@ RUN \
   && apt-get install -y aspell-*
 
 # Kernel for javascript (the node.js Jupyter kernel)
-RUN \
-     npm install --unsafe-perm -g ijavascript \
+RUN npm -i g npm@latest
+RUN npm install -g n
+RUN n stable
+RUN npm install -g node-gyp --install=global
+
+RUN npm install --unsafe-perm -g ijavascript \
   && ijsinstall --install=global
+
+
+# Create the file repository configuration:
+#RUN sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+
+# Import the repository signing key:
+# RUN wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+
+# Update the package lists:
+#RUN sudo apt-get update --allow-unauthenticated --allow-insecure-repositories
+
+# Install the latest version of PostgreSQL.
+# If you want a specific version, use 'postgresql-12' or similar instead of 'postgresql':
+#RUN sudo apt-get purge -y postgresql
+#RUN sudo apt-get -y --allow-unauthenticated install postgresql-14
+
 
 # Kernel for Typescript -- commented out since seems flakie and
 # probably not generally interesting.
@@ -244,7 +294,7 @@ RUN echo '2+3' | julia
 # via Google are all very wrong, incomplete, misleading, etc.  It's truly amazing how
 # disorganized-wrt-Google information about Julia is, as compared to Node.js and Python.
 RUN echo 'using Pkg; Pkg.add("IJulia");' | JUPYTER=/usr/local/bin/jupyter JULIA_DEPOT_PATH=/opt/julia/local/share/julia JULIA_PKG=/opt/julia/local/share/julia julia
-RUN mv "$HOME/.local/share/jupyter/kernels/julia"* "/usr/local/share/jupyter/kernels/"
+RUN cp -rf "$HOME/.local/share/jupyter/kernels/julia"* "/usr/local/share/jupyter/kernels/"
 
 # Also add Pluto system-wide, since we'll likely support it soon in cocalc, and also
 # Nemo and Hecke (some math software).
@@ -362,7 +412,7 @@ RUN \
 RUN umask 022 && pip3 install --upgrade /cocalc/src/smc_pyutil/
 
 # Install code into Sage
-RUN umask 022 && sage -pip install --upgrade /cocalc/src/smc_sagews/
+RUN umask 022 && sage -pip install -I /cocalc/src/smc_sagews/
 
 # Install pnpm package manager that we now use instead of npm
 RUN umask 022 \
