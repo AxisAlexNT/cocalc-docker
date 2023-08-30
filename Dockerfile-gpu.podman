@@ -416,7 +416,7 @@ RUN     sudo add-apt-repository universe && \
 # Other pip3 packages
 # NOTE: Upgrading zmq is very important, or the Ubuntu version breaks everything..
 RUN \
-  pip3 install --upgrade --no-cache-dir  pandas plotly scipy  scikit-learn seaborn bokeh zmq k3d nose pyzmq virtualenv
+  pip3 install --upgrade --no-cache-dir  pandas plotly scipy  scikit-learn seaborn bokeh zmq k3d nose pyzmq virtualenv venv-kernel
 
 RUN pip3 install -I --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu121
 
