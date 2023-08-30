@@ -3,7 +3,7 @@
 # NOTE: There is a simpler different variant of this script in the personal/ subdirectory,
 # which runs everything as a single non-root user.
 
-import os, tempfile, time, shutil, subprocess, sys, socket
+import os, tempfile, time, shutil, subprocess, sys, socket, errno
 
 if 'COCALC_REMEMBER_ME_COOKIE_NAME' not in os.environ:
     os.environ['COCALC_REMEMBER_ME_COOKIE_NAME'] = 'remember_me-' + socket.gethostname()
@@ -207,7 +207,13 @@ def main():
     start_hub()
     while True:
         log("Started services.")
-        os.wait()
+        try:
+                os.wait()
+        except OSError as e:
+                if e.errno == errno.ECHILD:
+                    time.sleep(60)
+                else:
+                    raise e
 
 
 if __name__ == "__main__":
