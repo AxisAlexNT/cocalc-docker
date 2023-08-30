@@ -205,10 +205,11 @@ def add_admin():
         try:
             print(run(
             """
-            curl 'https://localhost/api/v2/auth/sign-up' -X POST -H 'Accept: */*' -H 'Accept-Encoding: gzip, deflate, br' -H 'Referer: https://localhost/auth/sign-up' -H 'Content-Type: application/json' -H 'Origin: https://localhost' -H 'Connection: keep-alive' -H 'Sec-Fetch-Dest: empty' -H 'Sec-Fetch-Mode: cors' -H 'Sec-Fetch-Site: same-origin' --data-raw '{"terms":true,"email":"admin@cocalc.local","password":"defaultpassword","firstName":"Admin","lastName":"Site","registrationToken":"","tags":["ipynb","py","R","sage","m","term","tex","c","jl","md","board","course","sage-chat"]}'
+            curl -k 'https://localhost/api/v2/auth/sign-up' -X POST -H 'Accept: */*' -H 'Accept-Encoding: gzip, deflate, br' -H 'Referer: https://localhost/auth/sign-up' -H 'Conten>
             """
-            ), get_output=True)
-            print(run("/cocalc/src/scripts/make-user-admin admin@cocalc.local"), get_output=True)
+            , get_output=True))
+            print(run("/cocalc/src/scripts/make-user-admin admin@cocalc.local", get_output=True))
+            print("Default admin user should now have been created")
             break
         except RuntimeError as err:
             print("Cannot yet register default admin user, waiting 10 seconds more")
@@ -223,10 +224,11 @@ def main():
     start_ssh()
     start_postgres()
     start_hub()
+    log("Services should be started, now trying to add default admin user")
     time.sleep(10)
-    add_admin()
+    add_admin()   
+    log("Entering while loop")
     while True:
-        log("Started services.")
         try:
                 os.wait()
         except OSError as e:
