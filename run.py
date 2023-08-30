@@ -201,12 +201,18 @@ def init_log():
 def add_admin():
     log("add_admin")
     log("Adding default admin user")
-    print(run(
-        """
-        curl 'https://localhost/api/v2/auth/sign-up' -X POST -H 'Accept: */*' -H 'Accept-Encoding: gzip, deflate, br' -H 'Referer: https://localhost/auth/sign-up' -H 'Content-Type: application/json' -H 'Origin: https://localhost' -H 'Connection: keep-alive' -H 'Sec-Fetch-Dest: empty' -H 'Sec-Fetch-Mode: cors' -H 'Sec-Fetch-Site: same-origin' --data-raw '{"terms":true,"email":"admin@cocalc.local","password":"defaultpassword","firstName":"Admin","lastName":"Site","registrationToken":"","tags":["ipynb","py","R","sage","m","term","tex","c","jl","md","board","course","sage-chat"]}'
-        """
-    ), get_output=True)
-    print(run("/cocalc/src/scripts/make-user-admin admin@cocalc.local"), , get_output=True))
+    while True:
+        try:
+            print(run(
+            """
+            curl 'https://localhost/api/v2/auth/sign-up' -X POST -H 'Accept: */*' -H 'Accept-Encoding: gzip, deflate, br' -H 'Referer: https://localhost/auth/sign-up' -H 'Content-Type: application/json' -H 'Origin: https://localhost' -H 'Connection: keep-alive' -H 'Sec-Fetch-Dest: empty' -H 'Sec-Fetch-Mode: cors' -H 'Sec-Fetch-Site: same-origin' --data-raw '{"terms":true,"email":"admin@cocalc.local","password":"defaultpassword","firstName":"Admin","lastName":"Site","registrationToken":"","tags":["ipynb","py","R","sage","m","term","tex","c","jl","md","board","course","sage-chat"]}'
+            """
+            ), get_output=True)
+            print(run("/cocalc/src/scripts/make-user-admin admin@cocalc.local"), get_output=True)
+            break
+        except RuntimeError as err:
+            print("Cannot yet register default admin user, waiting 10 seconds more")
+            time.sleep(10)
 
 
 def main():
